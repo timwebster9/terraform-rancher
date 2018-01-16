@@ -1,0 +1,76 @@
+
+---
+- hosts: all
+  gather_facts: no
+  become: true
+  pre_tasks:
+    - raw: sudo apt-get -y install python-simplejson
+
+  tasks:
+  - name: manage_lvm (VG)
+    lvg:
+      vg: vg-data
+      pvs: /dev/sdc
+
+  - name: manage LVM (LV)
+    lvol:
+      vg: vg-data
+      lv: lv-docker
+      size: 100%FREE
+
+  - name: create fs for docker data
+    filesystem:
+      fstype: xfs
+      dev: /dev/mapper/vg--data-lv--docker
+
+  - name: mount docker data
+    mount:
+      path: /data/docker
+      src: /dev/mapper/vg--data-lv--docker
+      state: mounted
+      fstype: xfs
+
+  - name: add apt key for docker
+    apt_key:
+      url: https://download.docker.com/linux/ubuntu/gpg
+      state: present
+
+  - name: add docker repository
+    apt_repository:
+      repo: deb [arch=amd64] https://download.docker.com/linux/ubuntu xenial stable
+      state: present
+
+  - name: copy docker config
+    copy:
+      src: files/daemon.json
+      dest: /etc/docker/
+
+  - name: install docker
+    apt:
+      name: docker-ce
+      state: present
+
+  - name: install Pip
+    apt:
+      name: python-pip
+      state: present
+      
+  - name: install Docker Python dependencies
+    pip:
+      name: docker-py
+
+  - name: install Rancher
+    docker_container:
+      name: rancher_server
+      image: rancher/server:preview
+      state: started
+      ports: 8080:8080
+
+
+      
+
+
+      
+
+
+  
